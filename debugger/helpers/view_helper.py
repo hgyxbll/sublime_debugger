@@ -129,6 +129,13 @@ class ViewHelper(object):
 						window.focus_view(current_active)
 
 	@staticmethod
+	def move_to_front_by_view_name(window, debug_view):
+		for view in window.views():
+			if view.name() == debug_view:
+				ViewHelper.move_to_front(window, view)
+				break
+
+	@staticmethod
 	def sync_breakpoints(window):
 		for view in window.views():
 			view.run_command("toggle_breakpoint", {"mode":"refresh"})

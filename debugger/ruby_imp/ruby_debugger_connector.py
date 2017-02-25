@@ -45,10 +45,12 @@ class RubyDebuggerConnector(DebuggerConnector):
 		'''
 		Start and attach the process
 		'''
+		print("start process")
 		# Vaildate ruby versions and gem version
 		if not self.validation_environment():
 			return
 
+		print("environemnt is ok")
 		# Start the debuggee process
 		self.start_process(current_directory, file_name, args)
 
@@ -80,6 +82,7 @@ class RubyDebuggerConnector(DebuggerConnector):
 				startupinfo = subprocess.STARTUPINFO()
 				startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 				process_params = ["ruby", PathHelper.get_ruby_version_discoverer()]
+				print("use cmd[%s] to get rubyversion"%process_params)
 				self.ruby_version = subprocess.Popen(process_params, stdout=subprocess.PIPE, startupinfo=startupinfo).communicate()[0]
 		except Exception as ex:
 			self.log_message("Could not start process: "+str(ex)+'\n')
@@ -128,6 +131,7 @@ class RubyDebuggerConnector(DebuggerConnector):
 			startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 			process_params = ["ruby", "-C"+current_directory, "-r"+PathHelper.get_sublime_require(), file_name]
 			process_params += args
+			print("start proces:%s"%process_params)
 			self.process = subprocess.Popen(process_params, stdin = subprocess.PIPE, stderr = subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1, startupinfo=startupinfo)
 
 			if self.is_debug():
@@ -144,8 +148,8 @@ class RubyDebuggerConnector(DebuggerConnector):
 			try:
 				self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				self.client.connect(("localhost", 8989))
-				self.control_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				self.control_client.connect(("localhost", 8990))
+				#self.control_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				#self.control_client.connect(("localhost", 8990))
 				self.connected = True
 				self.log_message("Connected"+'\n')
 				break
@@ -192,6 +196,7 @@ class RubyDebuggerConnector(DebuggerConnector):
 				self.data.flush()
 
 				if self.has_end_stream():
+					#print("receive[%s]"%self.data.getvalue())
 					self.handle_response()
 
 		except Exception as ex:
@@ -208,18 +213,26 @@ class RubyDebuggerConnector(DebuggerConnector):
 
 	def handle_response(self):
 		results = self.split_by_results()
+		#print(results)
 		next_result = results.pop()
 
 		for result in results:
+			#print(result)
 			if result:
 				pass
 
+			is_set_pos = False
+			#print("result=[%s]"%result)
+			#print("check position is update")
 			file_name, line_number = self.get_current_position()
-
+			#print("except path[%s],real path[%s]"%(PathHelper.get_sublime_require(), file_name))
 			# Check wheather position was updated
 			if file_name != "" and not PathHelper.is_same_path(PathHelper.get_sublime_require(), file_name) and not "kernel_require.rb" in file_name:
+				#if file_name != "" :
 				self.debugger.signal_position_changed(file_name, line_number)
-				# self.log_message("New position: "+file_name+":"+str(line_number))
+				#print("New position: "+file_name+":"+str(line_number))
+				is_set_pos = True
+				# self.log_message("New position: "+file_name+":"+str(line_number))self.log_message("New position: "+file_name+":"+str(line_number))
 
 			try:
 				request = self.requests.get_nowait()
@@ -227,7 +240,9 @@ class RubyDebuggerConnector(DebuggerConnector):
 
 				# Check if should return the result
 				if request["signal"]:
+					#print(request)
 					prefix = request.get("prefix")
+					#print(prefix)
 					data = result.strip()
 
 					if prefix:
@@ -236,10 +251,13 @@ class RubyDebuggerConnector(DebuggerConnector):
 					# Return result
 					self.debugger.signal_text_result(data, request["reason"])
 				else:
+					if file_name == "":
+						print(result.strip())
 					pass
 
-				if PathHelper.is_same_path(PathHelper.get_sublime_require(), file_name) or "kernel_require.rb" in file_name:
+				if file_name != "" and PathHelper.is_same_path(PathHelper.get_sublime_require(), file_name) or "kernel_require.rb" in file_name:
 					self.debugger.run_command(DebuggerModel.COMMAND_STEP_OVER)
+					pass
 			except Empty:
 				pass
 
@@ -260,7 +278,7 @@ class RubyDebuggerConnector(DebuggerConnector):
 	def send_control_command(self, command):
 		if not self.connected:
 			pass
-
+		print("send_control_command:[%s]"%command)
 		try:
 			self.control_client.sendall(bytearray(command+'\n', "UTF-8"))
 		except Exception as e:
@@ -271,6 +289,7 @@ class RubyDebuggerConnector(DebuggerConnector):
 		if not self.connected:
 			return
 
+		print("send_data:[%s]"%command)
 		try:
 			self.client.sendall(bytearray(command+'\n', "UTF-8"))
 		except Exception as e:
@@ -282,17 +301,22 @@ class RubyDebuggerConnector(DebuggerConnector):
 		self.send_data_internal(command)
 
 	def send_with_result(self, command, reason, prefix):
+		print("prefix=[%s]"%prefix)
 		self.requests.put({"signal": True, "prefix": prefix, "reason": reason, "command": command})
 		self.send_data_internal(command)
 
 	def split_by_results(self):
 		result = [""]
 		for line in self.get_lines():
+			#print(self.ruby_protocol_type)
+			#print(line)
 			if self.debugger.match_ending(self.ruby_protocol_type, line):
+				#print("one result is end")
 				result.insert(len(result), "")
 			else:
 				result[len(result)-1] += line + '\n'
 
+		print("get %d results"%len(result))
 		return result
 
 	def has_end_stream(self):
@@ -325,7 +349,7 @@ class RubyDebuggerConnector(DebuggerConnector):
 
 	def stop(self):
 		self.log_message("Stopping...")
-		self.send_control_command("kill")
+		self.send_data_internal("q!")
 		if self.process:
 			self.process.kill()
 

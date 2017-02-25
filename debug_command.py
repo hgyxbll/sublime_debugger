@@ -6,6 +6,7 @@ try:
 except:
     from debugger import *
 
+import os
 class DebugCommand(sublime_plugin.WindowCommand):
 	def __init__(self, window):
 		super(DebugCommand, self).__init__(window)
@@ -15,6 +16,7 @@ class DebugCommand(sublime_plugin.WindowCommand):
 
 	def run(self, command, **args):
 		# Allow only known commands
+		print(command)
 		if command not in DebuggerModel.COMMANDS:
 			sublime.message_dialog("Unknown command: "+command)
 			return
@@ -36,7 +38,7 @@ class DebugCommand(sublime_plugin.WindowCommand):
 
 			if current_line:
 				self.clear_cursor()
-				self.debugger.run_command(DebuggerModel.COMMAND_SET_BREAKPOINT, file_name+":"+str(current_line+1))
+				self.debugger.run_command(DebuggerModel.COMMAND_SET_BREAKPOINT, os.path.basename(file_name)+":"+str(current_line+1))
 				self.debugger.run_command(DebuggerModel.COMMAND_CONTINUTE)
 				self.register_breakpoints()
 		elif command in DebuggerModel.MOVEMENT_COMMANDS:
@@ -58,6 +60,8 @@ class DebugCommand(sublime_plugin.WindowCommand):
 			self.window.show_input_panel("Enter input", '', lambda input_line: self.on_input_entered(input_line), None, None)
 		elif command == DebuggerModel.COMMAND_GET_EXPRESSION:
 			self.window.show_input_panel("Enter expression", '', lambda exp: self.on_expression_entered(exp), None, None)
+		elif command == DebuggerModel.COMMAND_EXE_DIRECT_CMD:
+			self.window.show_input_panel("Enter command for ruby debugger", '', lambda exp: self.on_direct_command_entered(exp), None, None)
 		elif command == DebuggerModel.COMMAND_ADD_WATCH:
 			self.window.show_input_panel("Enter watch expression", '', lambda exp: self.on_watch_entered(exp), None, None)
 		# Start command
@@ -73,7 +77,17 @@ class DebugCommand(sublime_plugin.WindowCommand):
 			else:
 				sublime.message_dialog("Cannot find file. Are you sure you're in a rails project?")
 		elif command == DebuggerModel.COMMAND_START_CURRENT_FILE:
-			self.start_command(self.window.active_view().file_name())
+			if self.debugger:
+				self.debugger.run_command(DebuggerModel.COMMAND_CONTINUTE)
+			else:
+				param = ""
+				param_file_name = os.path.basename(self.window.active_view().file_name())
+				param_file_name = param_file_name.split('.')[0] + "_param.ini"
+				if(os.path.exists(param_file_name)):
+					f1 = open(param_file_name)
+					param = f1.readline().strip()
+					f1.close()
+				self.start_command(self.window.active_view().file_name()+" "+param)
 		elif command == DebuggerModel.COMMAND_START:
 			self.window.show_input_panel("Enter file name", '', lambda file_name: self.start_command(file_name), None, None)
 		# Register breakpoints command
@@ -132,7 +146,7 @@ class DebugCommand(sublime_plugin.WindowCommand):
 				condition = " if "+condition
 			else:
 				condition = ""
-			self.debugger.run_command(DebuggerModel.COMMAND_SET_BREAKPOINT, file_name+":"+str(line_number)+str(condition))
+			self.debugger.run_command(DebuggerModel.COMMAND_SET_BREAKPOINT, os.path.basename(file_name)+":"+str(line_number)+str(condition))
 
 		# Refresh breakpoints window
 		self.debugger.run_command(DebuggerModel.COMMAND_GET_BREAKPOINTS)
@@ -142,11 +156,16 @@ class DebugCommand(sublime_plugin.WindowCommand):
 
 	def on_expression_entered(self, expression):
 		self.debugger.run_result_command(DebuggerModel.COMMAND_GET_EXPRESSION, expression, expression)
-		self.window.run_command("view_helper", {"command" : "move_to_front", "debug_view" : self.debug_views[DebuggerModel.DATA_IMMEDIATE]})
+		self.window.run_command("view_helper", {"command" : "move_to_front", "debug_view" : DebuggerModel.DATA_IMMEDIATE})
+
+	def on_direct_command_entered(self, expression):
+		#print("user input:"+expression)
+		self.debugger.run_command(DebuggerModel.COMMAND_EXE_DIRECT_CMD, expression)
+		#self.window.run_command("view_helper", {"command" : "move_to_front", "debug_view" : DebuggerModel.DATA_IMMEDIATE})
 
 	def on_watch_entered(self, expression):
 		self.debugger_model.add_watch(expression)
-		self.window.run_command("view_helper", {"command" : "move_to_front", "debug_view" : self.debug_views[DebuggerModel.DATA_WATCH]})
+		self.window.run_command("view_helper", {"command" : "move_to_front", "debug_view" : DebuggerModel.DATA_WATCH})
 
 	def add_text_result(self, result, reason):
 		result = self.debugger_model.update_data(reason, result)

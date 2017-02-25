@@ -16,10 +16,11 @@ class RubyDebugger(Debugger):
 	# Define protocol
 	COMMANDS = { DebuggerModel.COMMAND_GET_LOCATION:RubyDebugCommand("l=", "GetLocation"),
 				 DebuggerModel.COMMAND_GET_STACKTRACE:RubyDebugCommand("where", DebuggerModel.DATA_STACK, True),
-				 DebuggerModel.COMMAND_GET_LOCALS:RubyDebugCommand("info args", DebuggerModel.DATA_LOCALS, True),
+				 DebuggerModel.COMMAND_GET_LOCALS:RubyDebugCommand("var local", DebuggerModel.DATA_LOCALS, True),
 				 DebuggerModel.COMMAND_GET_THREADS:RubyDebugCommand("thread l", DebuggerModel.DATA_THREADS, True),
-				 DebuggerModel.COMMAND_GET_EXPRESSION:RubyDebugCommand("eval", DebuggerModel.DATA_IMMEDIATE, True),
-				 DebuggerModel.COMMAND_GET_BREAKPOINTS:RubyDebugCommand("info break", DebuggerModel.DATA_BREAKPOINTS, True),
+				 #DebuggerModel.COMMAND_GET_EXPRESSION:RubyDebugCommand("eval", DebuggerModel.DATA_IMMEDIATE, True),
+				 DebuggerModel.COMMAND_EXE_DIRECT_CMD:RubyDebugCommand("", DebuggerModel.RESULT_OUT, False),
+				 DebuggerModel.COMMAND_GET_BREAKPOINTS:RubyDebugCommand("info breakpoints", DebuggerModel.DATA_BREAKPOINTS, True),
 
 				 DebuggerModel.COMMAND_SEND_INPUT:RubyCustomDebugCommand(lambda debugger_constroller, *args: debugger_constroller.send_input(*args)),
 				 DebuggerModel.COMMAND_START:RubyCustomDebugCommand(lambda debugger_constroller, *args: debugger_constroller.start(*args)),
@@ -28,9 +29,12 @@ class RubyDebugger(Debugger):
 				 DebuggerModel.COMMAND_GET_WATCH:RubyCustomDebugCommand(lambda debugger_constroller, prefix, expression: debugger_constroller.send_with_result("eval " + expression, DebuggerModel.DATA_WATCH, prefix)),
 				 DebuggerModel.COMMAND_GET_EXPRESSION:RubyCustomDebugCommand(lambda debugger_constroller, prefix, expression: debugger_constroller.send_with_result("eval " + expression, DebuggerModel.DATA_IMMEDIATE, prefix)),
 
-				 DebuggerModel.COMMAND_SET_BREAKPOINT:RubyCustomDebugCommand(lambda debugger_constroller, location: debugger_constroller.send_control_command("b " + location)),
-				 DebuggerModel.COMMAND_CLEAR_BREAKPOINTS:RubyCustomDebugCommand(lambda debugger_constroller: debugger_constroller.send_control_command("delete")),
-				 DebuggerModel.COMMAND_INTERRUPT:RubyCustomDebugCommand(lambda debugger_constroller: debugger_constroller.send_control_command("interrupt")),
+				 DebuggerModel.COMMAND_SET_BREAKPOINT:RubyCustomDebugCommand(lambda debugger_constroller, location: debugger_constroller.send_data("b " + location, DebuggerModel.RESULT_OUT)),
+				 #DebuggerModel.COMMAND_SET_BREAKPOINT:RubyDebugCommand("b " + location, DebuggerModel.DATA_IMMEDIATE),
+				 #DebuggerModel.COMMAND_CLEAR_BREAKPOINTS:RubyCustomDebugCommand(lambda debugger_constroller: debugger_constroller.send_control_command("delete")),
+				 DebuggerModel.COMMAND_CLEAR_BREAKPOINTS:RubyDebugCommand("delete\ny",DebuggerModel.RESULT_OUT),
+				 #DebuggerModel.COMMAND_INTERRUPT:RubyCustomDebugCommand(lambda debugger_constroller: debugger_constroller.send_control_command("interrupt")),
+				 DebuggerModel.COMMAND_INTERRUPT:RubyDebugCommand("interrupt", DebuggerModel.RESULT_OUT),
 
 				 DebuggerModel.COMMAND_STEP_OVER:RubyDebugCommand("n", "step_over"),
 				 DebuggerModel.COMMAND_STEP_INTO:RubyDebugCommand("s", "step_into"),

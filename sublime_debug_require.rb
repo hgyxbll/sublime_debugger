@@ -1,3 +1,4 @@
+require 'utility'
 class RubyVersion
   attr_accessor :version, :gem_name, :init_block, :debug_block, :gem_version
 
@@ -9,7 +10,8 @@ class RubyVersion
     self.gem_version = gem_version
   end
 end
-
+#data: "127.0.0.1:8989"
+#control cmd: "127.0.0.1:8990"
 r193 = RubyVersion.new("1.9.3", "debugger", lambda { debugger  }, lambda {  Debugger.wait_connection = true; Debugger.start_remote "127.0.0.1" })
 r200 = RubyVersion.new("2.0.0", "byebug", lambda { byebug  }, lambda {  Byebug.wait_connection = true; Byebug.start_server "127.0.0.1" }, ">=2.5.0")
 
@@ -47,6 +49,9 @@ if current_version = RUBY_VERSION > "1.9.3" ? r200 : r193
   rescue Errno::EADDRINUSE
     puts "Another process is using the debugging ports (8989,8990)"
     puts "please make sure this ports are free and than run the debugger"
+    puts "Try will kill ruby process"
+    ProcessUtility.kill_by_file_name "ruby.exe"
+    puts "kill finish, please retry!"
     exit
   end
 end

@@ -9,6 +9,7 @@ class ViewHelperCommand(sublime_plugin.WindowCommand):
 		super(ViewHelperCommand, self).__init__(window)
 
 	def run(self, command, **args):
+		print(command)
 		if command == "set_cursor":
 			sublime.set_timeout(lambda window=self.window, args=args: ViewHelper.set_cursor(window, **args), 0)
 		elif command == "get_current_cursor":
@@ -18,6 +19,6 @@ class ViewHelperCommand(sublime_plugin.WindowCommand):
 		elif command == "hide_debug_windows":
 			sublime.set_timeout(lambda window=self.window, args=args: ViewHelper.hide_debug_windows(window, **args), 0)
 		elif command == "move_to_front":
-			sublime.set_timeout(lambda window=self.window, args=args: ViewHelper.move_to_front(window, **args), 0)
+			sublime.set_timeout(lambda window=self.window, args=args: ViewHelper.move_to_front_by_view_name(window, **args), 0)
 		elif command == "sync_breakpoints":
 			sublime.set_timeout(lambda window=self.window, args=args: ViewHelper.sync_breakpoints(window, **args), 0)

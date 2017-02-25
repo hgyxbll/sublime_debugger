@@ -16,6 +16,7 @@ class RubyDebugCommand(DebugCommand):
 			if isinstance(self.commands, list):
 				self.execute_list(debugger_constroller, self.commands.copy(), self.reason, lambda command,reason: debugger_constroller.send_for_result(command, reason))
 			else:
+				print("execute:"+self.commands)
 				debugger_constroller.send_for_result(self.command_with_args(self.commands, *args), self.reason)
 		elif self.is_returning_data:
 			if isinstance(self.commands, list):
@@ -26,10 +27,11 @@ class RubyDebugCommand(DebugCommand):
 			debugger_constroller.send_without_outcome(self.command_with_args(self.commands, *args))
 
 	def command_with_args(self, command, *args):
+		#print("cmd:"+command)
 		if args:
 			for arg in args:
 				command += " "+arg
-
+		#print("cmd:"+command)
 		return command
 
 	def execute_list(self, debugger_constroller, commands, reason, func):
